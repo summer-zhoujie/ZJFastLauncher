@@ -14,15 +14,15 @@ public final class C1324 implements Runnable {
     public final /* synthetic */ AccessibilityEvent f3794;
 
     public C1324(AccTask r1, AccessibilityEvent accessibilityEvent) {
-        this.f3793 = r1;
-        this.f3794 = accessibilityEvent;
+        this.acctask = r1;
+        this.accessibilityEvent = accessibilityEvent;
     }
 
     public void run() {
         AccessibilityNodeInfo accessibilityNodeInfo;
         try {
-            AccTask r0 = this.f3793;
-            AccessibilityEvent accessibilityEvent = this.f3794;
+            AccTask r0 = this.acctask;
+            AccessibilityEvent accessibilityEvent = this.accessibilityEvent;
             if (!r0.mo8878() && accessibilityEvent != null) {
                 accessibilityNodeInfo = accessibilityEvent.getSource();
                 AccessibilityNodeInfo r2 = C1279.m3443(accessibilityNodeInfo);
@@ -34,9 +34,9 @@ public final class C1324 implements Runnable {
             e.getMessage();
             accessibilityNodeInfo = null;
         } catch (Throwable th) {
-            this.f3794.recycle();
+            this.accessibilityEvent.recycle();
             throw th;
         }
-        this.f3794.recycle();
+        this.accessibilityEvent.recycle();
     }
 }
