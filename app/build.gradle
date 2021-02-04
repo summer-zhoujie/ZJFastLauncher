@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+//greendao==start
+apply plugin: 'org.greenrobot.greendao'
+//greendao==end
+
 android {
     compileSdkVersion 30
     buildToolsVersion "29.0.3"
@@ -20,6 +24,43 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    signingConfigs {
+        config {
+            keyAlias 'zj'
+            keyPassword 'zhoujie'
+            def keystore = rootDir.toString() + File.separator + "app" + File.separator + "zj.jks"
+            System.out.println("keystore : " + keystore)
+            storeFile file(keystore)
+            storePassword 'zhoujie'
+        }
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "Fast_" +
+                    new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC")) + "_" +
+                    variant.buildType.name + "_" +
+                    variant.versionName + "_" +
+                    variant.flavorName +
+                    ".apk"
+        }
+    }
+//    applicationVariants.all { variant ->
+//        //这个修改输出的APK路径
+//        if (variant.buildType.name != "debug") {//防止AS无法安装debug包(apk)
+//            variant.getPackageApplication().outputDirectory = new File(project.rootDir.absolutePath + "/apk")
+//        }
+//        variant.getPackageApplication().outputScope.apkDatas.forEach { apkData ->
+//            //这个修改输出APK的文件名
+//            apkData.outputFileName = "Fast_" +
+//                    new Date().format("yyyy-MM-dd", TimeZone.getTimeZone("UTC")) + "_" +
+//                    variant.buildType.name + "_" +
+//                    variant.versionName + "_" +
+//                    variant.flavorName +
+//                    ".apk"
+//        }
+//    }
 }
 
 dependencies {
@@ -30,4 +71,15 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
+    // 工具包集成
+    implementation 'com.github.summer-zhoujie:ZJUtils:1.0.4'
+
+    // 弹窗统一风格
+    implementation 'com.github.f0ris.sweetalert:library:1.6.2'
+
+    // greendao
+    implementation 'org.greenrobot:greendao:3.3.0'
+
+    // greendao 升级帮助类
+    implementation 'io.github.yuweiguocn:GreenDaoUpgradeHelper:v2.2.1'
 }

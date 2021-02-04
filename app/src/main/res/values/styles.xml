@@ -2,9 +2,15 @@
     <!-- Base application theme. -->
     <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
         <!-- Customize your theme here. -->
-        <item name="colorPrimary">@color/colorPrimary</item>
-        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-        <item name="colorAccent">@color/colorAccent</item>
+        <item name="colorPrimary">#707070</item>
+        <item name="colorPrimaryDark">#2c2c2c</item>
+        <item name="colorAccent">#FFFFFF</item>
+    </style>
+
+    <style name="MySwitchTheme">
+        <item name="colorSwitchThumbNormal">#ff000000</item>
+        <item name="colorControlActivated">#FFF1F1F1</item>
+        <item name="android:colorForeground">#FF2F2F2F</item>
     </style>
 
 </resources>

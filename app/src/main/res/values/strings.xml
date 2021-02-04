@@ -1,3 +1,4 @@
 <resources>
-    <string name="app_name">My Application</string>
+    <string name="app_name">Fast</string>
+    <string name="service_desc">必须开启该服务，否则软件不能正常运行。本软件不会收集您的任何隐私。如果经常自动关闭，请在“手机管家”或“安全中心”开启本软件的自启动权限，允许后台运行。</string>
 </resources>
