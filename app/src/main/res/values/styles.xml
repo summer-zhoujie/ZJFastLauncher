@@ -13,4 +13,10 @@
         <item name="android:colorForeground">#FF2F2F2F</item>
     </style>
 
+    <style name="Theme_Dialog" parent="android:Theme.Light">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+
 </resources>

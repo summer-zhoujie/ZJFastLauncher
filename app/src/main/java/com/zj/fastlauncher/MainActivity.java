@@ -2,6 +2,7 @@ package com.zj.fastlauncher;
 
 import android.annotation.TargetApi;
 import android.app.ActivityManager;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
@@ -26,8 +27,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private LinearLayout llOnOffService;
     private SwitchCompat swiitchOnOffService;
-    private LinearLayout llAutoRecord;
-    private SwitchCompat switchAutoRecord;
     private static final int GET_OVERLAY_PERMISSION_REQUESTCODE = 1000;
 
 
@@ -44,11 +43,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void initView() {
         llOnOffService = findViewById(R.id.ll_on_off_service);
         swiitchOnOffService = findViewById(R.id.switch_on_off_service);
-        llAutoRecord = findViewById(R.id.ll_auto_record);
-        switchAutoRecord = findViewById(R.id.switch_auto_record);
 
         llOnOffService.setOnClickListener(this);
-        llAutoRecord.setOnClickListener(this);
     }
 
     @Override
@@ -72,29 +68,27 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
             }
         }
-
-        // 自动记录下能跳过的界面
-        else if (id == R.id.ll_auto_record) {
-            // 没有系统弹窗权限
-            if (!isHaveOverlayPermission()) {
-                new SweetAlertDialog(this, SweetAlertDialog.CUSTOM_IMAGE_TYPE)
-                        .setTitleText("请允许显示在其他应用上层")
-                        .setContentText("使用此项功能需要允许显示在其他应用上层")
-                        .setCustomImage(R.mipmap.ic_launcher)
-                        .setConfirmText("立即允许")
-                        .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
-                            @Override
-                            public void onClick(SweetAlertDialog sweetAlertDialog) {
-                                getOverlayPermission();
-                                sweetAlertDialog.dismiss();
-                            }
-                        })
-                        .show();
-
-                return;
-            }
-            updateAutoRecordFuncStatus(!llAutoRecord.isSelected());
-        }
+//        // 自动记录下能跳过的界面
+//        else if (id == R.id.ll_auto_record) {
+//            // 没有系统弹窗权限
+//            if (!isHaveOverlayPermission()) {
+//                new SweetAlertDialog(this, SweetAlertDialog.CUSTOM_IMAGE_TYPE)
+//                        .setTitleText("请允许显示在其他应用上层")
+//                        .setContentText("使用此项功能需要允许显示在其他应用上层")
+//                        .setCustomImage(R.mipmap.ic_launcher)
+//                        .setConfirmText("立即允许")
+//                        .setConfirmClickListener(new SweetAlertDialog.OnSweetClickListener() {
+//                            @Override
+//                            public void onClick(SweetAlertDialog sweetAlertDialog) {
+//                                getOverlayPermission();
+//                                sweetAlertDialog.dismiss();
+//                            }
+//                        })
+//                        .show();
+//
+//                return;
+//            }
+//        }
     }
 
     /**
@@ -116,34 +110,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         startActivityForResult(intent, GET_OVERLAY_PERMISSION_REQUESTCODE);
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == GET_OVERLAY_PERMISSION_REQUESTCODE) {
-            updateAutoRecordFuncStatus(isHaveOverlayPermission());
-        }
-    }
-
-    /**
-     * 更新 '自动记录下能跳过的界面' 功能的视图状态
-     */
-    private void updateAutoRecordFuncStatus(boolean isSelected) {
-        if (llAutoRecord != null) {
-            if (llAutoRecord.isSelected() == isSelected) {
-                return;
-            }
-            llAutoRecord.setSelected(isSelected);
-            switchAutoRecord.setChecked(isSelected);
-            BaseAccessibilityService.setAutorecordFuncEnable(isSelected);
-        }
-    }
 
     @Override
     protected void onResume() {
         super.onResume();
         // 考虑到无法得到用户前往设置界面配置的结果, 在这里做一次刷新
         updateJumpFuncStatus();
-        updateAutoRecordFuncStatus(BaseAccessibilityService.getAutorecordFuncEnable());
     }
 
     /**
