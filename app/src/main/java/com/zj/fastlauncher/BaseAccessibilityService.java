@@ -14,6 +14,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 
 import com.zj.fastlauncher.db.entities.ActCanJump;
 import com.zj.fastlauncher.utils.PrintUtils;
+import com.zj.tools.mylibrary.ZJHandlerUtil;
 import com.zj.tools.mylibrary.ZJLog;
 
 import java.util.ArrayList;
@@ -107,7 +108,6 @@ public class BaseAccessibilityService extends AccessibilityService {
             classPath = getClassPath(event);
             updateForgroundActivity(eventType, classPath, event.getPackageName().toString());
             doJump(getRootInActiveWindow());
-
         } catch (NullPointerException e) {
             ZJLog.e("event == null");
             return;
@@ -140,6 +140,22 @@ public class BaseAccessibilityService extends AccessibilityService {
      * 使用查询'跳过'Text的方式来执行跳过(抓到直接执行跳过)
      */
     private void doJump(AccessibilityNodeInfo source) {
+
+        // 酷狗音乐执行内置跳过规则
+        if (forggroundActivity.equals("com.kugou.android/com.kugou.android.app.splash.SplashActivity")) {
+            ZJLog.d("酷狗执行内置跳过规则");
+            ZJHandlerUtil.postToMain(new Runnable() {
+                @Override
+                public void run() {
+                    if (forggroundActivity.equals("com.kugou.android/com.kugou.android.app.splash.SplashActivity")) {
+                        final Rect outBounds = new Rect(880, 146, 1043, 216);
+                        mockClick(outBounds);
+                    }
+                }
+            },500);
+            return;
+        }
+
         if ((curAppActivityCount <= 2 || isCanJump(forggroundActivity)) && !isCurJumpOk) {
 
             final List<AccessibilityNodeInfo> result = new ArrayList<>();
@@ -155,7 +171,10 @@ public class BaseAccessibilityService extends AccessibilityService {
                 for (AccessibilityNodeInfo info : result) {
                     if (!info.performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
                         if (info.getParent() == null || !info.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK)) {
-                            mockClick(info);
+                            ZJLog.d("执行手势跳过 id=" + info.getViewIdResourceName());
+                            final Rect outBounds = new Rect();
+                            info.getBoundsInScreen(outBounds);
+                            mockClick(outBounds);
                         } else {
                             ZJLog.d("执行父控件跳过 id=" + info.getParent().getViewIdResourceName());
                         }
@@ -180,10 +199,7 @@ public class BaseAccessibilityService extends AccessibilityService {
     /**
      * 模拟坐标点击
      */
-    private boolean mockClick(AccessibilityNodeInfo info) {
-        ZJLog.d("执行手势跳过 id=" + info.getViewIdResourceName());
-        final Rect outBounds = new Rect();
-        info.getBoundsInScreen(outBounds);
+    private boolean mockClick(Rect outBounds) {
         float X = outBounds.centerX();
         float Y = outBounds.centerY();
         long startTime = 0;
