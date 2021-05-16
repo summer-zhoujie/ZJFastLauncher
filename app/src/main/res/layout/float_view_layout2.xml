@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.zj.fastlauncher.MoveAbleBtn xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/bt_test"
+    android:layout_width="30dp"
+    android:layout_height="30dp"
+    android:background="@drawable/target"
+    android:clickable="false"
+    android:focusable="false" />

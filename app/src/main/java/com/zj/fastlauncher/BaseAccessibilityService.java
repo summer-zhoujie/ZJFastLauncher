@@ -22,6 +22,8 @@ import java.util.List;
 
 public class BaseAccessibilityService extends AccessibilityService {
 
+    public static BaseAccessibilityService service;
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // variables
 
@@ -88,6 +90,7 @@ public class BaseAccessibilityService extends AccessibilityService {
         } catch (Exception e) {
             ZJLog.e("错误: " + Log.getStackTraceString(e));
         }
+        service = this;
     }
 
     @SuppressLint("WrongConstant")
@@ -107,10 +110,20 @@ public class BaseAccessibilityService extends AccessibilityService {
             eventType = event.getEventType();
             classPath = getClassPath(event);
             updateForgroundActivity(eventType, classPath, event.getPackageName().toString());
-            doJump(getRootInActiveWindow());
+//            doJump(getRootInActiveWindow());
+            print(event);
         } catch (NullPointerException e) {
             ZJLog.e("event == null");
             return;
+        }
+    }
+
+    private void print(AccessibilityEvent event) {
+        if (event.getEventType() == AccessibilityEvent.TYPE_VIEW_CLICKED) {
+            AccessibilityNodeInfo source = event.getSource();
+            final Rect outBounds = new Rect();
+            source.getBoundsInScreen(outBounds);
+            ZJLog.d("点击坐标位置 = " + outBounds);
         }
     }
 
@@ -152,7 +165,7 @@ public class BaseAccessibilityService extends AccessibilityService {
                         mockClick(outBounds);
                     }
                 }
-            },500);
+            }, 500);
             return;
         }
 
@@ -209,6 +222,28 @@ public class BaseAccessibilityService extends AccessibilityService {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             GestureDescription.Builder builder = new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(path, startTime, duration));
             return dispatchGesture(builder.build(), null, null);
+        } else {
+            return false;
+        }
+    }
+
+    public boolean mockClick(float orix, float oriy) {
+        final float x = Math.max(orix, 0f);
+        final float y = Math.max(oriy, 0f);
+        ZJLog.d("开始模拟点击, orix=" + orix + ",oriy=" + oriy + ", targetx=" + x + ", targety=" + y);
+        long startTime = 0;
+        long duration = 20;
+        Path path = new Path();
+        path.moveTo(x, y);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            GestureDescription.Builder builder = new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(path, startTime, duration));
+            return dispatchGesture(builder.build(), new GestureResultCallback() {
+                @Override
+                public void onCompleted(GestureDescription gestureDescription) {
+                    super.onCompleted(gestureDescription);
+                    ZJLog.d("完成模拟点击, targetx=" + x + ", targety=" + y);
+                }
+            }, null);
         } else {
             return false;
         }
