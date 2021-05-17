@@ -8,22 +8,17 @@ import android.graphics.PixelFormat;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.SystemClock;
 import android.provider.Settings;
-import android.view.GestureDetector;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
-import androidx.constraintlayout.widget.ConstraintLayout;
 
-import com.zj.fastlauncher.db.DaoHelper;
 import com.zj.tools.mylibrary.ZJConvertUtils;
 import com.zj.tools.mylibrary.ZJLog;
 
@@ -37,7 +32,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     // variables
 
     private LinearLayout llOnOffService;
-    private SwitchCompat swiitchOnOffService;
+    private SwitchCompat switchOnOffService;
     private static final int GET_OVERLAY_PERMISSION_REQUESTCODE = 1000;
     private LinearLayout llClick;
     private SwitchCompat switchClick;
@@ -58,7 +53,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void initView() {
         llOnOffService = findViewById(R.id.ll_on_off_service);
-        swiitchOnOffService = findViewById(R.id.switch_on_off_service);
+        switchOnOffService = findViewById(R.id.switch_on_off_service);
         llOnOffService.setOnClickListener(this);
 
         llClick = findViewById(R.id.ll_click);
@@ -107,7 +102,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                 return;
             }
-            showCLickOptsDialog();
+            llClick.setSelected(true);
+            switchClick.setChecked(true);
+            ClickOptsHelper.get().show(MainActivity.this);
+            ClickOptsHelper.get().setListener(new ClickOptsHelper.Listener() {
+                @Override
+                public void onDismiss() {
+                    if (llClick != null) {
+                        llClick.setSelected(false);
+                        switchClick.setChecked(false);
+                    }
+                }
+            });
         }
     }
 
@@ -121,7 +127,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         final WindowManager.LayoutParams defaultLayoutParams1 = getDefaultLayoutParams();
         final WindowManager.LayoutParams defaultLayoutParams2 = getDefaultLayoutParams();
         if (inflate == null) {
-            inflate = LayoutInflater.from(this).inflate(R.layout.float_view_layout, null);
+            inflate = LayoutInflater.from(this).inflate(R.layout.opts_menu_layout, null);
             final View btClick = inflate.findViewById(R.id.bt_test);
             btClick.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -136,7 +142,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         ZJLog.d("outLocation = " + outLocation[0] + "-" + outLocation[1] + ", inWindow = " + inWindow[0] + "-" + inWindow[1]);
                         ZJLog.d("width = " + inflate2.getWidth() + ", height = " + inflate2.getHeight());
                         final float x = outLocation[0] * 1.0f + inflate2.getWidth() / 2.0f;
-                        final float y = outLocation[1] * 1.0f + inflate2.getHeight() / 2.0f;
+                        final float y = outLocation[1] * 1.0f + inflate2.getHeight() / 2.0f - 104;
                         // x=1003.0,y=184.0
                         final boolean b = BaseAccessibilityService.service.mockClick(x, y);
                         ZJLog.d("模拟点击是否成功 = " + b);
@@ -173,7 +179,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             if (inflate2 == null) {
                 defaultLayoutParams2.width = ZJConvertUtils.dp2px(30);
                 defaultLayoutParams2.height = ZJConvertUtils.dp2px(30);
-                inflate2 = LayoutInflater.from(this).inflate(R.layout.float_view_layout2, null);
+                inflate2 = LayoutInflater.from(this).inflate(R.layout.click_points_layout, null);
                 final View btClick2 = inflate2.findViewById(R.id.bt_test);
                 btClick2.setOnTouchListener(new View.OnTouchListener() {
                     int lastX;
@@ -273,7 +279,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (llOnOffService != null) {
             final boolean selected = serviceIsRunning() && BaseAccessibilityService.getJumpFuncEnable();
             llOnOffService.setSelected(selected);
-            swiitchOnOffService.setChecked(selected);
+            switchOnOffService.setChecked(selected);
         }
     }
 

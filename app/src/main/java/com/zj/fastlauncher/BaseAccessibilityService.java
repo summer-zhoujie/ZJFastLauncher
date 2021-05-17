@@ -249,6 +249,33 @@ public class BaseAccessibilityService extends AccessibilityService {
         }
     }
 
+    public boolean mockDoubleClick(float orix, float oriy) {
+        final float x = Math.max(orix, 0f);
+        final float y = Math.max(oriy, 0f);
+        ZJLog.d("开始模拟点击, orix=" + orix + ",oriy=" + oriy + ", targetx=" + x + ", targety=" + y);
+        final long startTime = 0;
+        final long duration = 20;
+        Path path = new Path();
+        final Path path2 = new Path();
+        path.moveTo(x, y);
+        path2.moveTo(x, y);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            GestureDescription.Builder builder = new GestureDescription.Builder().addStroke(new GestureDescription.StrokeDescription(path, startTime, duration));
+            return dispatchGesture(builder.build(), new GestureResultCallback() {
+                @Override
+                public void onCompleted(GestureDescription gestureDescription) {
+                    super.onCompleted(gestureDescription);
+                    ZJLog.d("完成模拟点击, targetx=" + x + ", targety=" + y);
+                    GestureDescription.Builder builder2 = new GestureDescription.Builder();
+                    GestureDescription gestureDescription2 = builder2.addStroke(new GestureDescription.StrokeDescription(path2, startTime, duration)).build();
+                    BaseAccessibilityService.this.dispatchGesture(gestureDescription2, null, null);
+                }
+            }, null);
+        } else {
+            return false;
+        }
+    }
+
     /**
      * 获取界面的全路径
      */
