@@ -16,6 +16,7 @@ import android.widget.EditText;
 import android.widget.Switch;
 
 import com.zj.tools.mylibrary.ZJConvertUtils;
+import com.zj.tools.mylibrary.ZJHandlerUtil;
 import com.zj.tools.mylibrary.ZJLog;
 import com.zj.tools.mylibrary.ZJScreenUtils;
 import com.zj.tools.mylibrary.ZJToast;
@@ -208,8 +209,8 @@ public class ClickOptsHelper implements View.OnClickListener {
             return;
         }
         isCurStart = true;
-        for (View point : clickPoints) {
-
+        for (int i = 0; i < clickPoints.size(); i++) {
+            View point = clickPoints.get(i);
             // 计算点击位置
             int[] outLocation = new int[2];
             point.getLocationOnScreen(outLocation);
@@ -237,20 +238,32 @@ public class ClickOptsHelper implements View.OnClickListener {
                         mockClick(x, y);
                     }
                 }
-            }, 0, options.timeInterval);
+            }, 400*i, options.timeInterval);
             timers.add(timer);
         }
     }
 
-    private void mockClick(float x, float y) {
+    private void mockClick(final float x, final float y) {
         if (BaseAccessibilityService.service != null) {
-            BaseAccessibilityService.service.mockClick(x, y);
+            ZJHandlerUtil.postToMain(new Runnable() {
+                @Override
+                public void run() {
+                    BaseAccessibilityService.service.mockClick(x, y);
+                }
+            });
         }
     }
 
-    private void mockDoubleClick(float x, float y) {
+    private void mockDoubleClick(final float x, final float y) {
         if (BaseAccessibilityService.service != null) {
-            BaseAccessibilityService.service.mockDoubleClick(x, y);
+            BaseAccessibilityService.service.mockClick(x, y);
+            ZJHandlerUtil.postToMain(new Runnable() {
+                @Override
+                public void run() {
+                    BaseAccessibilityService.service.mockClick(x, y);
+                }
+            }, 200);
+
         }
     }
 
@@ -295,7 +308,9 @@ public class ClickOptsHelper implements View.OnClickListener {
         });
 
         clickPoints.add(clickPointNew);
-
+        final ClickPointOptions clickPointOptions = new ClickPointOptions();
+        clickPointOptions.reset();
+        clickPointOptionsMap.put(clickPointNew, clickPointOptions);
         windowManager.addView(clickPointNew, getClickPointsDefaultLayoutParams());
     }
 
@@ -462,7 +477,7 @@ public class ClickOptsHelper implements View.OnClickListener {
          */
         public void reset() {
             isDouble = true;
-            timeInterval = 20000;
+            timeInterval = 5000;
             isDel = false;
         }
     }
