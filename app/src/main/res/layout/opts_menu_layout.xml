@@ -24,9 +24,23 @@
         android:text="停止" />
 
     <Button
+        android:id="@+id/s_config"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="配置"/>
+
+    <Button
+        android:id="@+id/hide_or_show"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="显/隐" />
+
+    <Button
         android:id="@+id/exits"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="退出"
         android:textColor="#ff00ff" />
+
+
 </LinearLayout>

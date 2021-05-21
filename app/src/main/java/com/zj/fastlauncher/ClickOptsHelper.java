@@ -22,7 +22,6 @@ import com.zj.tools.mylibrary.ZJScreenUtils;
 import com.zj.tools.mylibrary.ZJToast;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +75,8 @@ public class ClickOptsHelper implements View.OnClickListener {
      * 记录正在运行的点击模拟事件
      */
     private List<Timer> timers = new ArrayList<>();
+    private ClickPointOptions globalConfig = new ClickPointOptions();
+    private View configMenu;
 
     public interface Listener {
         void onDismiss();
@@ -124,6 +125,8 @@ public class ClickOptsHelper implements View.OnClickListener {
             menu.findViewById(R.id.start).setOnClickListener(this);
             menu.findViewById(R.id.stop).setOnClickListener(this);
             menu.findViewById(R.id.exits).setOnClickListener(this);
+            menu.findViewById(R.id.s_config).setOnClickListener(this);
+            menu.findViewById(R.id.hide_or_show).setOnClickListener(this);
         }
 
         if (menu.getParent() == null) {
@@ -142,7 +145,42 @@ public class ClickOptsHelper implements View.OnClickListener {
             stopClickHelp();
         } else if (id == R.id.exits) {
             exits();
+        } else if (id == R.id.s_config) {
+            if (configMenu == null) {
+                final int[] outLocation = new int[2];
+                menu.getLocationOnScreen(outLocation);
+                configMenu = createConfigMenu();
+                WindowManager.LayoutParams lp = getConfigMenuDefaultLayoutParams();
+                lp.width = CLICK_POINT_MENU_W;
+                lp.height = CLICK_POINT_MENU_H;
+                lp.gravity = Gravity.START | Gravity.TOP;
+                lp.x = outLocation[0] + menu.getWidth();
+                lp.y = outLocation[1];
+                windowManager.addView(configMenu, lp);
+            }
+
+            v.setSelected(!v.isSelected());
+            configMenu.setVisibility(v.isSelected() ? View.VISIBLE : View.GONE);
+        } else if (id == R.id.hide_or_show) {
+            v.setSelected(!v.isSelected());
+            for (View clickPoint : clickPoints) {
+                clickPoint.setVisibility(v.isSelected() ? View.GONE : View.VISIBLE);
+            }
         }
+    }
+
+    private WindowManager.LayoutParams getConfigMenuDefaultLayoutParams() {
+        final WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
+        // 设置为始终
+        layoutParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        // 大小
+        layoutParams.width = ZJConvertUtils.dp2px(30);
+        layoutParams.height = ZJConvertUtils.dp2px(30);
+        // 位置
+        layoutParams.gravity = Gravity.CENTER;
+        // 设置背景透明
+        layoutParams.format = PixelFormat.TRANSLUCENT;
+        return layoutParams;
     }
 
     /**
@@ -218,7 +256,7 @@ public class ClickOptsHelper implements View.OnClickListener {
             final float y = outLocation[1] + point.getHeight() / 2;
 
             // 获取点击的配置项
-            final ClickPointOptions options = clickPointOptionsMap.get(point);
+            final ClickPointOptions options = globalConfig;
 
             // 隐藏点击的配置控件
             point.setVisibility(View.GONE);
@@ -238,7 +276,7 @@ public class ClickOptsHelper implements View.OnClickListener {
                         mockClick(x, y);
                     }
                 }
-            }, 400*i, options.timeInterval);
+            }, 400 * i, options.timeInterval);
             timers.add(timer);
         }
     }
@@ -298,14 +336,14 @@ public class ClickOptsHelper implements View.OnClickListener {
                 return false;
             }
         });
-        // 弹出按钮的编辑菜单
-        clickPointNew.setOnLongClickListener(new View.OnLongClickListener() {
-            @Override
-            public boolean onLongClick(View v) {
-                switchShowClickPoint(v);
-                return false;
-            }
-        });
+//        // 弹出按钮的编辑菜单
+//        clickPointNew.setOnLongClickListener(new View.OnLongClickListener() {
+//            @Override
+//            public boolean onLongClick(View v) {
+//                switchShowClickPoint(v);
+//                return false;
+//            }
+//        });
 
         clickPoints.add(clickPointNew);
         final ClickPointOptions clickPointOptions = new ClickPointOptions();
@@ -356,6 +394,56 @@ public class ClickOptsHelper implements View.OnClickListener {
             lp.y += -(CLICK_POINT_MENU_H + clickPoint.getHeight());
         }
         windowManager.addView(menu, lp);
+    }
+
+    /**
+     * 创建一个新的clickPoint的菜单视图
+     */
+    private View createConfigMenu() {
+
+        final View menu = LayoutInflater.from(context).inflate(R.layout.click_points_menu_layout, null);
+        Switch switchbtn = menu.findViewById(R.id.s_double_or_single);
+        switchbtn.setChecked(globalConfig.isDouble);
+        switchbtn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                globalConfig.isDouble = isChecked;
+            }
+        });
+        EditText et = menu.findViewById(R.id.et_interval);
+        et.setFocusable(true);
+        et.setFocusableInTouchMode(true);
+        et.setText(globalConfig.timeInterval + "");
+        et.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                try {
+                    globalConfig.timeInterval = Integer.parseInt(s.toString().trim());
+                } catch (NumberFormatException e) {
+                    ZJLog.e("error = " + Log.getStackTraceString(e));
+                }
+            }
+        });
+        menu.findViewById(R.id.del).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (menu.getParent() != null) {
+                    menu.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        return menu;
     }
 
     /**
@@ -477,7 +565,7 @@ public class ClickOptsHelper implements View.OnClickListener {
          */
         public void reset() {
             isDouble = true;
-            timeInterval = 5000;
+            timeInterval = 20000;
             isDel = false;
         }
     }
