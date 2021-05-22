@@ -77,7 +77,7 @@ dependencies {
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 
     // 工具包集成
-    implementation 'com.github.summer-zhoujie:ZJUtils:1.0.4'
+    implementation 'com.github.summer-zhoujie:ZJUtils:1.0.5'
 
     // 弹窗统一风格
     implementation 'com.github.f0ris.sweetalert:library:1.6.2'

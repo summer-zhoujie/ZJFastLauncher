@@ -3,6 +3,7 @@ package com.zj.fastlauncher;
 import android.app.Application;
 
 import com.zj.tools.mylibrary.ZJLog;
+import com.zj.tools.mylibrary.ZJSPUtils;
 import com.zj.tools.mylibrary.ZJToast;
 
 public class BaseApplication extends Application {
@@ -12,7 +13,8 @@ public class BaseApplication extends Application {
         super.onCreate();
         app = this;
         ZJToast.init(this);
-        ZJLog.init(true,"FastLauncher");
+        ZJLog.init(true, "FastLauncher");
+        ZJSPUtils.initSp(this);
     }
 
     public static Application getApp() {

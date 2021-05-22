@@ -1,8 +1,12 @@
 package com.zj.fastlauncher;
 
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.graphics.Color;
 import android.graphics.PixelFormat;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
@@ -11,6 +15,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Switch;
@@ -18,6 +23,7 @@ import android.widget.Switch;
 import com.zj.tools.mylibrary.ZJConvertUtils;
 import com.zj.tools.mylibrary.ZJHandlerUtil;
 import com.zj.tools.mylibrary.ZJLog;
+import com.zj.tools.mylibrary.ZJSPUtils;
 import com.zj.tools.mylibrary.ZJScreenUtils;
 import com.zj.tools.mylibrary.ZJToast;
 
@@ -32,6 +38,10 @@ import java.util.TimerTask;
  * 辅助点击帮助类
  */
 public class ClickOptsHelper implements View.OnClickListener {
+    /**
+     * 缓存配置
+     */
+    private static final String SP_CACHE_CONFIG = "sp_cache_config";
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // variables
@@ -49,18 +59,10 @@ public class ClickOptsHelper implements View.OnClickListener {
     private WindowManager windowManager;
     private Context context;
     /**
-     * 记录点击按钮对应的菜单组件
-     */
-    private HashMap<View, View> clickPointMenuMap = new HashMap<>();
-    /**
      * 写死clickpoint的菜单的长宽
      */
     private static final int CLICK_POINT_MENU_W = ZJConvertUtils.dp2px(400);
     private static final int CLICK_POINT_MENU_H = ZJConvertUtils.dp2px(50);
-    /**
-     * 记录点击按钮对应的脚本策略
-     */
-    private HashMap<View, ClickPointOptions> clickPointOptionsMap = new HashMap<>();
     /**
      * 记录所有点击控件
      */
@@ -123,9 +125,11 @@ public class ClickOptsHelper implements View.OnClickListener {
             menu = (ViewGroup) LayoutInflater.from(context).inflate(R.layout.opts_menu_layout, null);
             menu.findViewById(R.id.add).setOnClickListener(this);
             menu.findViewById(R.id.start).setOnClickListener(this);
-            menu.findViewById(R.id.stop).setOnClickListener(this);
             menu.findViewById(R.id.exits).setOnClickListener(this);
+            menu.findViewById(R.id.save).setOnClickListener(this);
+            menu.findViewById(R.id.load).setOnClickListener(this);
             menu.findViewById(R.id.s_config).setOnClickListener(this);
+            menu.findViewById(R.id.clear).setOnClickListener(this);
             menu.findViewById(R.id.hide_or_show).setOnClickListener(this);
         }
 
@@ -138,18 +142,55 @@ public class ClickOptsHelper implements View.OnClickListener {
     public void onClick(View v) {
         int id = v.getId();
         if (id == R.id.add) {
+            if (isCurStart) {
+                return;
+            }
             addNewClickPoint(context, windowManager);
         } else if (id == R.id.start) {
-            startClickHelp();
-        } else if (id == R.id.stop) {
-            stopClickHelp();
+            v.setSelected(!v.isSelected());
+            if (v.isSelected()) {
+                final boolean b = startClickHelp();
+                if (!b) {
+                    return;
+                }
+            } else {
+                stopClickHelp();
+            }
+
+            ((Button) v).setText(v.isSelected() ? "已开始" : "已停止");
+            ((Button) v).setTextColor(Color.parseColor(v.isSelected() ? "#ff00ff" : "#000000"));
         } else if (id == R.id.exits) {
-            exits();
+//            exits();
+            v.setSelected(!v.isSelected());
+            ((Button) v).setText(v.isSelected() ? "展开" : "收起");
+            ((Button) v).setTextColor(Color.parseColor(v.isSelected() ? "#ff00ff" : "#000000"));
+            for (int i = 0; i < menu.getChildCount(); i++) {
+                final View childAt = menu.getChildAt(i);
+                if (childAt == v) {
+                    continue;
+                }
+                childAt.setVisibility(v.isSelected() ? View.GONE : View.VISIBLE);
+            }
         } else if (id == R.id.s_config) {
+
+            if (isCurStart) {
+                return;
+            }
             if (configMenu == null) {
                 final int[] outLocation = new int[2];
                 menu.getLocationOnScreen(outLocation);
                 configMenu = createConfigMenu();
+                configMenu.findViewById(R.id.del).setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if (configMenu.getParent() != null) {
+                            configMenu.setVisibility(View.GONE);
+                            final Button configBtn = menu.findViewById(R.id.s_config);
+                            configBtn.setSelected(!configBtn.isSelected());
+                            configBtn.setTextColor(Color.parseColor(configBtn.isSelected() ? "#ff00ff" : "#000000"));
+                        }
+                    }
+                });
                 WindowManager.LayoutParams lp = getConfigMenuDefaultLayoutParams();
                 lp.width = CLICK_POINT_MENU_W;
                 lp.height = CLICK_POINT_MENU_H;
@@ -160,13 +201,85 @@ public class ClickOptsHelper implements View.OnClickListener {
             }
 
             v.setSelected(!v.isSelected());
+            ((Button) v).setTextColor(Color.parseColor(v.isSelected() ? "#ff00ff" : "#000000"));
             configMenu.setVisibility(v.isSelected() ? View.VISIBLE : View.GONE);
         } else if (id == R.id.hide_or_show) {
+            if (isCurStart) {
+                return;
+            }
             v.setSelected(!v.isSelected());
             for (View clickPoint : clickPoints) {
-                clickPoint.setVisibility(v.isSelected() ? View.GONE : View.VISIBLE);
+                clickPoint.setVisibility(v.isSelected() ? View.INVISIBLE : View.VISIBLE);
+            }
+            ((Button) v).setText(v.isSelected() ? "隐" : "显");
+            ((Button) v).setTextColor(Color.parseColor(v.isSelected() ? "#ff00ff" : "#000000"));
+        } else if (id == R.id.save) {
+            if (isCurStart) {
+                return;
+            }
+
+            doSaveConfigAndClickPoints();
+        } else if (id == R.id.load) {
+            if (isCurStart) {
+                return;
+            }
+            loadConfigAndClickPointsFromCache();
+        }else if (id == R.id.clear) {
+            if (isCurStart) {
+                return;
+            }
+            clearClickPoints();
+            clearTimers();
+        }
+    }
+
+    /**
+     * 加载缓存的配置
+     */
+    private void loadConfigAndClickPointsFromCache() {
+        final String cacheConfig = ZJSPUtils.getString(SP_CACHE_CONFIG, "");
+        if (TextUtils.isEmpty(cacheConfig)) {
+            ZJToast.show("还没有保存过配置!");
+            return;
+        }
+
+        ZJLog.d("加载配置 = " + cacheConfig);
+        clearClickPoints();
+        clearTimers();
+
+        final String[] split = cacheConfig.split(",");
+
+        globalConfig.isDouble = Boolean.parseBoolean(split[0]);
+        globalConfig.timeInterval = Integer.parseInt(split[1]);
+        if (split.length > 4) {
+            for (int i = 2; i < split.length - 1; i = i + 2) {
+                final int x = Integer.parseInt(split[i]);
+                final int y = Integer.parseInt(split[i + 1]);
+                addNewClickPoint(context, windowManager, x, y);
             }
         }
+
+    }
+
+    /**
+     * 保存当前的配置和点击位置
+     */
+    private void doSaveConfigAndClickPoints() {
+        final StringBuilder b = new StringBuilder();
+        b.append(globalConfig.isDouble + ",");
+        b.append(globalConfig.timeInterval + "");
+        for (View point : clickPoints) {
+            final int[] outLocation = new int[2];
+            point.getLocationOnScreen(outLocation);
+            b.append(",");
+            b.append(outLocation[0] + "");
+            b.append(",");
+            b.append(outLocation[1] + "");
+        }
+        final String value = b.toString();
+        ZJSPUtils.putString(SP_CACHE_CONFIG, value);
+        ZJToast.show("配置保存成功");
+        ZJLog.d("保存配置 = " + value);
     }
 
     private WindowManager.LayoutParams getConfigMenuDefaultLayoutParams() {
@@ -189,26 +302,10 @@ public class ClickOptsHelper implements View.OnClickListener {
     private void exits() {
 
         // 清空资源
-        for (View clickPoint : clickPoints) {
-            if (clickPoint.getParent() != null) {
-                windowManager.removeView(clickPoint);
-            }
-        }
-        clickPoints.clear();
+        clearClickPoints();
 
-        for (Map.Entry<View, View> viewViewEntry : clickPointMenuMap.entrySet()) {
-            View value = viewViewEntry.getValue();
-            if (value.getParent() != null) {
-                windowManager.removeView(value);
-            }
-        }
-        clickPointMenuMap.clear();
+        clearTimers();
 
-        for (Timer timer : timers) {
-            timer.cancel();
-        }
-        timers.clear();
-        clickPointOptionsMap.clear();
         if (menu != null && menu.getParent() != null) {
             windowManager.removeView(menu);
         }
@@ -217,6 +314,22 @@ public class ClickOptsHelper implements View.OnClickListener {
         if (listener != null) {
             listener.onDismiss();
         }
+    }
+
+    private void clearTimers() {
+        for (Timer timer : timers) {
+            timer.cancel();
+        }
+        timers.clear();
+    }
+
+    private void clearClickPoints() {
+        for (View clickPoint : clickPoints) {
+            if (clickPoint.getParent() != null) {
+                windowManager.removeView(clickPoint);
+            }
+        }
+        clickPoints.clear();
     }
 
     private void stopClickHelp() {
@@ -238,13 +351,13 @@ public class ClickOptsHelper implements View.OnClickListener {
         isCurStart = false;
     }
 
-    private void startClickHelp() {
+    private boolean startClickHelp() {
         if (isCurStart) {
-            return;
+            return false;
         }
         if (clickPoints.isEmpty()) {
             ZJToast.show("没有配置项, 请至少配置一个点击点!");
-            return;
+            return false;
         }
         isCurStart = true;
         for (int i = 0; i < clickPoints.size(); i++) {
@@ -260,10 +373,6 @@ public class ClickOptsHelper implements View.OnClickListener {
 
             // 隐藏点击的配置控件
             point.setVisibility(View.GONE);
-            View view = clickPointMenuMap.get(point);
-            if (view != null) {
-                view.setVisibility(View.GONE);
-            }
 
             // 开始模拟点击
             Timer timer = new Timer();
@@ -279,6 +388,8 @@ public class ClickOptsHelper implements View.OnClickListener {
             }, 400 * i, options.timeInterval);
             timers.add(timer);
         }
+
+        return true;
     }
 
     private void mockClick(final float x, final float y) {
@@ -309,6 +420,10 @@ public class ClickOptsHelper implements View.OnClickListener {
      * 新增一个点击的点位
      */
     private void addNewClickPoint(Context context, final WindowManager windowManager) {
+        addNewClickPoint(context, windowManager, -1, -1);
+    }
+
+    private void addNewClickPoint(Context context, final WindowManager windowManager, int x, int y) {
         View clickPointNew = LayoutInflater.from(context).inflate(R.layout.click_points_layout, null);
         final WindowManager.LayoutParams lp = getClickPointsDefaultLayoutParams();
         // 设置随手指移动
@@ -346,54 +461,28 @@ public class ClickOptsHelper implements View.OnClickListener {
 //        });
 
         clickPoints.add(clickPointNew);
-        final ClickPointOptions clickPointOptions = new ClickPointOptions();
-        clickPointOptions.reset();
-        clickPointOptionsMap.put(clickPointNew, clickPointOptions);
-        windowManager.addView(clickPointNew, getClickPointsDefaultLayoutParams());
+
+        final int statusBarHeight = 0;
+        getStatusBarHeight();
+        if (x >= 0 && y >= statusBarHeight) {
+            lp.x = x;
+            lp.y = y - statusBarHeight;
+            lp.gravity = Gravity.START | Gravity.TOP;
+        }
+        windowManager.addView(clickPointNew, lp);
     }
 
-    /**
-     * 隐藏/显示点击控件的菜单项
-     * <p>
-     * 长按点击控件调用此方法, 用于展示点击控件的菜单项, 在菜单中用户可以使用以下功能:
-     * 1. 切换单击/双击
-     * 2. 设置点击间隔(单位: ms)
-     * 3. 删除这个点击位置项
-     *
-     * @param clickPoint 点击控件 clickPoint
-     */
-    private void switchShowClickPoint(View clickPoint) {
-        View menu = clickPointMenuMap.get(clickPoint);
+    public int getStatusBarHeight() {
+        Resources resources = context.getResources();
 
-        // 隐藏
-        if (menu != null && menu.getParent() != null) {
-            windowManager.removeView(menu);
-            return;
-        }
-        // 展示
-        if (menu == null) {
-            menu = createOnPointsMenu(clickPoint);
-            clickPointMenuMap.put(clickPoint, menu);
-        }
-        int[] outLocation = new int[2];
-        clickPoint.getLocationOnScreen(outLocation);
+        int resourceId = resources.getIdentifier("status_bar_height", "dimen", "android");
 
-        WindowManager.LayoutParams lp = getClickPointsDefaultLayoutParams();
-        lp.width = CLICK_POINT_MENU_W;
-        lp.height = CLICK_POINT_MENU_H;
-        lp.gravity = Gravity.START | Gravity.TOP;
-        lp.x = outLocation[0];
-        lp.y = outLocation[1] + clickPoint.getHeight();
-        int offsetx = screen_width - (lp.x + CLICK_POINT_MENU_W);
-        if (offsetx < 0) {
-            lp.x += offsetx;
-        }
+        int height = resources.getDimensionPixelSize(resourceId);
 
-        int offsety = screen_height - (lp.y + CLICK_POINT_MENU_H);
-        if (offsety < 0) {
-            lp.y += -(CLICK_POINT_MENU_H + clickPoint.getHeight());
-        }
-        windowManager.addView(menu, lp);
+        ZJLog.d("status bar>>> height:" + height);
+
+        return height;
+
     }
 
     /**
@@ -432,80 +521,6 @@ public class ClickOptsHelper implements View.OnClickListener {
                 } catch (NumberFormatException e) {
                     ZJLog.e("error = " + Log.getStackTraceString(e));
                 }
-            }
-        });
-        menu.findViewById(R.id.del).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (menu.getParent() != null) {
-                    menu.setVisibility(View.GONE);
-                }
-            }
-        });
-
-        return menu;
-    }
-
-    /**
-     * 创建一个新的clickPoint的菜单视图
-     */
-    private View createOnPointsMenu(final View clickPoint) {
-
-        ClickPointOptions options;
-        options = clickPointOptionsMap.get(clickPoint);
-        if (options == null) {
-            options = new ClickPointOptions();
-            clickPointOptionsMap.put(clickPoint, options);
-        }
-        options.reset();
-        final ClickPointOptions finalOptions = options;
-
-        View menu = LayoutInflater.from(context).inflate(R.layout.click_points_menu_layout, null);
-        Switch switchbtn = menu.findViewById(R.id.s_double_or_single);
-        switchbtn.setChecked(options.isDouble);
-        switchbtn.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                finalOptions.isDouble = isChecked;
-            }
-        });
-        EditText et = menu.findViewById(R.id.et_interval);
-        et.setText(options.timeInterval + "");
-        et.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                try {
-                    finalOptions.timeInterval = Integer.parseInt(s.toString().trim());
-                } catch (NumberFormatException e) {
-                    ZJLog.e("error = " + Log.getStackTraceString(e));
-                }
-            }
-        });
-        menu.findViewById(R.id.del).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                finalOptions.isDel = true;
-
-                // do del
-                View remove = clickPointMenuMap.remove(clickPoint);
-                if (remove.getParent() != null) {
-                    windowManager.removeView(remove);
-                }
-                clickPointOptionsMap.remove(clickPoint);
-                if (clickPoint.getParent() != null) {
-                    windowManager.removeView(clickPoint);
-                }
-                clickPoints.remove(clickPoint);
             }
         });
 
